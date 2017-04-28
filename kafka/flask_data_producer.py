@@ -21,7 +21,7 @@ from kafka.errors import (
 logger_format = '%(asctime)-15s %(message)s'
 logging.basicConfig(format=logger_format)
 logger = logging.getLogger('data-producer')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 app = Flask(__name__)
 app.config.from_envvar('ENV_CONFIG_FILE')
@@ -29,7 +29,7 @@ kafka_broker = app.config['CONFIG_KAFKA_ENDPOINT']
 topic_name = app.config['CONFIG_KAFKA_TOPIC']
 
 producer = KafkaProducer(
-    bootstrap_servers=kafka_broker
+    bootstrap_servers = kafka_broker
 )
 
 schedule = BackgroundScheduler()
@@ -70,7 +70,7 @@ def fetch_price(symbol):
     """
     logger.debug('Start to fetch stock price for %s', symbol)
     try:
-        price = json.dumps(getQuotes(symbol))
+        price = json.dumps(getQuotes(symbol)).encode("utf-8")
         logger.debug('Retrieved stock info %s', price)
         producer.send(topic=topic_name, value=price, timestamp_ms=time.time())
         logger.info('Sent stock price for %s to Kafka', symbol)
@@ -89,10 +89,10 @@ def add_stock(symbol):
     if symbol in symbols:
         pass
     else:
-        symbol = symbol.encode('utf-8')
+        #symbol = symbol.encode('utf-8')
         symbols.add(symbol)
         logger.info('Add stock retrieve job %s' % symbol)
-        schedule.add_job(fetch_price, 'interval', [symbol], seconds=1, id=symbol)
+        schedule.add_job(fetch_price, 'interval', [symbol], seconds=10,id=symbol)
     return jsonify(results=list(symbols)), 200
 
 
@@ -111,4 +111,4 @@ def del_stock(symbol):
 
 if __name__ == '__main__':
     atexit.register(shutdown_hook)
-    app.run(host='0.0.0.0', port=app.config['CONFIG_APPLICATION_PORT'])
+    app.run(host='127.0.0.1', port=app.config['CONFIG_APPLICATION_PORT'])
